@@ -9,12 +9,17 @@ from app.services.auth_service import AuthService
 
 controller = APIRouter(prefix="/auth", tags=["Autenticação"])
 
-@controller.post("/register", status_code=status.HTTP_201_CREATED, summary="Cadastrar um novo usuário")
-def registrar_usuario(dados: UserRegister, db: Session = Depends(get_db)):
+@controller.post("/register", status_code=status.HTTP_201_CREATED, summary="Cadastrar um novo usuário com senha mascarada")
+def registrar_usuario(
+    dados: OAuth2PasswordRequestForm = Depends(), 
+    db: Session = Depends(get_db)
+):
     repo = UserRepository(db)
     service = AuthService(repo)
-    usuario = service.registrar(dados)
+    dados_adaptados = UserRegister(username=dados.username, password=dados.password)
+    usuario = service.registrar(dados_adaptados)
     return {"status": "sucesso", "username": usuario.username}
+
 
 @controller.post("/login", response_model=Token, summary="Efetuar login seguro com senha mascarada")
 def login_usuario(
@@ -25,6 +30,7 @@ def login_usuario(
     service = AuthService(repo)
     dados_adaptados = UserRegister(username=dados.username, password=dados.password)
     return service.login(dados_adaptados)
+
 
 @controller.post("/refresh", response_model=Token, summary="Gera um novo token caso o de 5 minutos expire")
 def renovar_token(dados: RefreshTokenInput, db: Session = Depends(get_db)):
